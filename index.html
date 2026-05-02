@@ -563,8 +563,9 @@
         const btn = document.getElementById('btn-enviar');
         btn.innerText = 'A registar no Banco de Dados...'; btn.disabled = true;
 
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbyuP61kMQlfH96gO-WauWnEZjqmIeEMm8nRoyrINJvCVqHY3QVgetCw9DgfOuKVts0HLA/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxs9yVPL1S0JiRI4yzQrDHniwdgmk35JytCRKgFAJTV-HSYSfUfwjhuaBmqO5ScjmYMng/exec';
         const data = {
+            atividade: 'Laboratório de Cones', // Identificador da Atividade
             nome: nome,
             ans1: document.getElementById('ans1').value,
             ans2: document.getElementById('ans2').value,
