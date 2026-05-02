@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cones - Geometria Espacial no Ensino Médio</title>
+    
+    <!-- Bibliotecas 3D e Matemática -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary-color: #2b6cb0;
+            --secondary-text: #4a5568;
+            --accent-yellow: #ecc94b;
+            --border-color: #e2e8f0;
+            --color-reto: #4da6ff;
+            --color-obliquo: #ff6666;
+            --color-cilindro: #9ae6b4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: #1a202c;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        header { margin-bottom: 25px; text-align: center; }
+        h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 5px; color: #2d3748; }
+        .subtitle { font-size: 1.1rem; color: var(--secondary-text); margin-bottom: 10px; }
+        .divider { width: 100px; height: 4px; background-color: var(--accent-yellow); margin: 0 auto 15px; }
+
+        /* Estilo do Laboratório 3D */
+        #lab-container {
+            background-color: #121212;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        #canvas-3d { height: 480px; width: 100%; position: relative; }
+        
+        #gui-overlay {
+            position: absolute; top: 15px; left: 0; pointer-events: none;
+            display: flex; justify-content: space-around; width: 100%; z-index: 5;
+        }
+        #gui-overlay h2 { margin: 0; font-size: 18px; text-transform: uppercase; text-shadow: 0 2px 5px #000; }
+
+        /* Painel de Controles e Cálculos */
+        .dashboard-row { display: flex; gap: 15px; margin-bottom: 30px; }
+        .box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; flex: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .box h3 { margin-top: 0; font-size: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px; color: #2d3748; }
+
+        .control-group { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .control-group label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; color: var(--secondary-text); margin-bottom: 3px; }
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--primary-color); }
+        .slider-rev { accent-color: #ecc94b !important; flex: 1; }
+
+        .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .calc-col { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #edf2f7; font-size: 0.8rem; }
+        .calc-col h4 { margin: 0 0 6px 0; text-align: center; font-size: 0.85rem; }
+        .calc-row { display: flex; justify-content: space-between; margin-bottom: 3px; border-bottom: 1px dashed #cbd5e0; }
+        .calc-val { font-weight: bold; font-family: monospace; font-size: 0.9rem; }
+
+        /* Estilo das Questões */
+        .student-info { background: var(--card-bg); padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 6px solid var(--accent-yellow); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .student-info label { font-weight: bold; display: block; margin-bottom: 8px; color: var(--primary-color); }
+        .student-info input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+
+        .question-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .question-card h3 { margin-top: 0; color: var(--primary-color); font-size: 1.2rem; }
+        .action-box { background: #edf2f7; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; border-left: 4px solid #4a5568; }
+        textarea { width: 100%; height: 110px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; resize: vertical; box-sizing: border-box; font-family: inherit; }
+
+        .btn-enviar { display: block; width: 100%; padding: 18px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 20px; }
+        .btn-enviar:hover { background: #1a365d; }
+        .btn-enviar:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        /* Camada de Cotas */
+        #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+        .cota-label { position: absolute; font-family: 'Times New Roman', serif; font-size: 20px; font-weight: bold; color: white; transform: translate(-50%, -50%); text-shadow: 1px 1px 3px #000, 0 0 5px rgba(0,0,0,0.8); white-space: nowrap; }
+
+        .btn-animar { background: #ecc94b; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; color: #2d3748; transition: 0.2s; min-width: 80px; text-align: center; }
+        .btn-animar:hover { opacity: 0.9; }
+
+        @media (max-width: 850px) { .dashboard-row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Cones: Reto vs Oblíquo</h1>
+        <div class="subtitle">Laboratório Virtual de Investigação Geométrica</div>
+        <div class="divider"></div>
+        <div style="font-size: 0.9rem; color: #718096;">
+            <strong>Autoria:</strong> Mateus Goldschmidt & Karen Laís Vorpagel<br>
+            UFFS - Licenciatura em Matemática | 2026
+        </div>
+    </header>
+
+    <div class="student-info">
+        <label for="student-name">Identificação do Aluno:</label>
+        <input type="text" id="student-name" placeholder="Digite o seu nome completo">
+    </div>
+
+    <!-- LABORATORIO 3D -->
+    <div id="lab-container">
+        <div id="canvas-3d">
+            <div id="gui-overlay">
+                <h2 style="color: var(--color-reto)">Cone Reto</h2>
+                <h2 style="color: var(--color-obliquo)">Cone Oblíquo</h2>
+            </div>
+            <div id="labels-container"></div>
+        </div>
+    </div>
+
+    <!-- PAINEL DE DADOS -->
+    <div class="dashboard-row">
+        <div class="box">
+            <h3>Parâmetros do Experimento</h3>
+            <div class="control-group">
+                <label>Raio da Base (r): <span id="ui-r" style="color: var(--primary-color)">10</span></label>
+                <input type="range" id="range-r" min="5" max="15" value="10" step="0.5">
+            </div>
+            <div class="control-group">
+                <label>Altura Vertical (h): <span id="ui-h" style="color: var(--primary-color)">30</span></label>
+                <input type="range" id="range-h" min="15" max="45" value="30" step="1">
+            </div>
+            <div class="control-group">
+                <label>Inclinação (θ): <span id="ui-ang" style="color: var(--color-obliquo)">30°</span></label>
+                <input type="range" id="range-ang" min="0" max="45" value="30" step="1">
+            </div>
+            
+            <div class="control-group" style="background: #fdf6e3; padding: 10px; border-radius: 6px; margin-top: 10px; border: 1px solid #f6e05e;">
+                <label style="color: #b7791f; display: flex; justify-content: space-between;">
+                    Revolução do Cone Reto: <span id="ui-rev">360°</span>
+                </label>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                    <input type="range" id="range-rev" class="slider-rev" min="0" max="360" value="360" step="1">
+                    <button id="btn-anim-rev" class="btn-animar">Animar</button>
+                </div>
+            </div>
+
+            <label style="display: flex; align-items: center; gap: 10px; margin-top: 15px; font-size: 0.85rem; color: #2d3748; cursor: pointer; background: #e6fffa; padding: 8px; border-radius: 6px; border: 1px solid #bbeecc;">
+                <input type="checkbox" id="check-cilindro" style="width: 18px; height: 18px;"> 
+                <b>Comparar com Cilindro Circunscrito</b>
+            </label>
+            
+            <div class="control-group" style="background: #f1f5f9; padding: 10px; border-radius: 6px; margin-top: 10px;">
+                <label>Desenrolar Superfície: <span id="ui-prog">0%</span></label>
+                <input type="range" id="range-prog" min="0" max="100" value="0" step="0.5">
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Cálculos em Tempo Real</h3>
+            <div class="calc-grid">
+                <div class="calc-col" style="border-top: 4px solid var(--color-reto)">
+                    <h4>Cone Reto</h4>
+                    <div class="calc-row"><span>Área Base</span> <span id="val-reto-ab" class="calc-val">-</span></div>
+                    <div class="calc-row"><span>Área Lateral</span> <span id="val-reto-al" class="calc-val">-</span></div>
+                    <div class="calc-row"><span>Área Total</span> <span id="val-reto-at" class="calc-val">-</span></div>
+                    <div class="calc-row" style="border-top: 1px solid #cbd5e0; margin-top: 5px; padding-top: 5px;">
+                        <span>Volume (V)</span> <span id="val-reto-v" class="calc-val" style="color: var(--primary-color)">-</span>
+                    </div>
+                </div>
+                <div class="calc-col" style="border-top: 4px solid var(--color-obliquo)">
+                    <h4>Cone Oblíquo</h4>
+                    <div class="calc-row"><span>Área Base</span> <span id="val-obl-ab" class="calc-val">-</span></div>
+                    <div class="calc-row"><span>Área Lateral</span> <span id="val-obl-al" class="calc-val">-</span></div>
+                    <div class="calc-row"><span>Área Total</span> <span id="val-obl-at" class="calc-val">-</span></div>
+                    <div class="calc-row" style="border-top: 1px solid #cbd5e0; margin-top: 5px; padding-top: 5px;">
+                        <span>Volume (V)</span> <span id="val-obl-v" class="calc-val" style="color: var(--primary-color)">-</span>
+                    </div>
+                </div>
+            </div>
+            <div id="cilindro-info" style="display: none; background: #e6fffa; padding: 10px; border-radius: 6px; margin-top: 10px; text-align: center; border: 1px solid #9ae6b4;">
+                <span style="font-size: 0.85rem; color: #276749;"><b>Volume do Cilindro Envolvente:</b> <span id="val-cil-v" style="font-size: 1.1rem; font-family: monospace;">-</span> u³</span>
+            </div>
+            <p style="font-size: 0.7rem; color: #718096; margin-top: 10px; font-style: italic;">Obs: O cálculo da área lateral do oblíquo utiliza integração numérica e o volume via Princípio de Cavalieri.</p>
+        </div>
+    </div>
+
+    <!-- QUESTÕES -->
+    <h2 style="color: #2d3748; margin-bottom: 20px;">Roteiro de Investigação</h2>
+
+    <div class="question-card">
+        <h3>1. Invariância do Volume (Princípio de Cavalieri)</h3>
+        <div class="action-box"><strong>Ação:</strong> Com os cones perfeitamente fechados (Revolução em 360° e Desenrolar em 0%), altere apenas a <strong>Inclinação (θ)</strong>. Observe os dados numéricos de Volume (V).</div>
+        <p>O que ocorre com o volume de ambos conforme a inclinação aumenta? Utilizando o Princípio de Cavalieri (imaginar o cone fatiado em dezenas de discos muito finos), explique por que o cone torto comporta exatamente a mesma quantidade de espaço interno que o cone reto.</p>
+        <textarea id="ans1" placeholder="Desenvolva a sua resposta aqui..."></textarea>
+    </div>
+
+    <div class="question-card">
+        <h3>2. O Sólido de Revolução (Cone Reto)</h3>
+        <div class="action-box"><strong>Ação:</strong> Clique em <strong>Animar</strong> na barra de Revolução e observe a figura amarela translúcida que "varre" o espaço.</div>
+        <p>O cone reto é chamado de "sólido de revolução". Qual é o nome do polígono amarelo que está a girar para formar o cone? Explique, com as suas palavras, qual lado desse polígono funciona como o <strong>eixo/altura</strong>, qual lado forma o <strong>raio da base</strong> e qual lado forma a <strong>geratriz</strong>.</p>
+        <textarea id="ans2" placeholder="Desenvolva a sua resposta aqui..."></textarea>
+    </div>
+
+    <div class="question-card">
+        <h3>3. Cone vs. Cilindro (Relação Espacial)</h3>
+        <div class="action-box"><strong>Ação:</strong> Ative a caixa <strong>Comparar com Cilindro Circunscrito</strong>. Compare o <strong>Volume do Cone Reto</strong> com o <strong>Volume do Cilindro Envolvente</strong> (na caixa verde do painel numérico).</div>
+        <p>Divida mentalmente (ou com a calculadora) o volume do cilindro pelo volume do cone. Qual é a proporção exata entre eles? Usando essa lógica, se a fórmula do volume de um cilindro é V = A<sub>base</sub> &times; h, como você escreveria a fórmula matemática para calcular o volume de um cone?</p>
+        <textarea id="ans3" placeholder="Desenvolva a sua resposta aqui..."></textarea>
+    </div>
+
+    <div class="question-card">
+        <h3>4. O Setor Circular (Planificação do Reto)</h3>
+        <div class="action-box"><strong>Ação:</strong> Desligue o cilindro e coloque o <strong>Desenrolar Superfície</strong> em 100%. Com a inclinação em 0°, brinque com o Raio e a Altura.</div>
+        <p>A superfície do cone reto, quando aberta, forma uma "fatia de pizza" chamada Setor Circular. O que acontece com a "abertura" (o ângulo) dessa fatia se você colocar um Raio máximo (15) e uma Altura mínima (15)? Por que o papel precisa se abrir quase como um círculo completo para cobrir um cone tão "achatado"?</p>
+        <textarea id="ans4" placeholder="Desenvolva a sua resposta aqui..."></textarea>
+    </div>
+
+    <div class="question-card">
+        <h3>5. A Onda Irregular (Planificação do Oblíquo)</h3>
+        <div class="action-box"><strong>Ação:</strong> Mantenha a planificação em 100% e aumente a <strong>Inclinação (θ)</strong> ao máximo. Compare o molde azul (reto) com o molde vermelho (oblíquo).</div>
+        <p>Repare que a borda inferior do molde azul é um arco de círculo perfeito, enquanto a do vermelho fica totalmente ondulada. 
+        <br><br>
+        <strong>💡 Dica de Investigação:</strong> Gire o cone oblíquo 3D fechado (0% de planificação) e observe a distância entre o vértice (a ponta) e a base. Essa distância (a parede do cone) é sempre igual em toda a volta? Como o tamanho da parede lateral ajuda a justificar os "picos e vales" que aparecem quando a figura é esticada na mesa?</p>
+        <textarea id="ans5" placeholder="Desenvolva a sua resposta aqui..."></textarea>
+    </div>
+
+    <button id="btn-enviar" class="btn-enviar" onclick="enviarDados()">Registar as Minhas Observações</button>
+
+</div>
+
+<script>
+    // --- SETUP 3D ---
+    const container = document.getElementById('canvas-3d');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x121212, 0.002);
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
+    camera.position.set(0, 80, 240);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.DirectionalLight(0xffffff, 0.9);
+    light.position.set(50, 150, 100);
+    scene.add(light);
+
+    const grid = new THREE.GridHelper(500, 40, 0x333333, 0x222222);
+    grid.position.y = -60;
+    scene.add(grid);
+
+    // --- GEOMETRIA DOS CONES ---
+    const N = 200; 
+    const planeGeo = new THREE.PlaneGeometry(1, 1, N, 1); 
+    const origPos = new Float32Array(planeGeo.attributes.position.array);
+
+    const meshReto = new THREE.Mesh(planeGeo.clone(), new THREE.MeshStandardMaterial({color: 0x4da6ff, side: 2, roughness: 0.3}));
+    const meshObl  = new THREE.Mesh(planeGeo.clone(), new THREE.MeshStandardMaterial({color: 0xff6666, side: 2, roughness: 0.3}));
+    const groupReto = new THREE.Group(); groupReto.position.x = -65; scene.add(groupReto); groupReto.add(meshReto);
+    const groupObl  = new THREE.Group(); groupObl.position.x = 65;   scene.add(groupObl);  groupObl.add(meshObl);
+
+    // Bases (Criadas dinamicamente)
+    let bReto = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({color: 0x2b7bc4, side: 2, roughness: 0.5}));
+    let bObl  = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({color: 0xc43b3b, side: 2, roughness: 0.5}));
+    groupReto.add(bReto); groupObl.add(bObl);
+
+    // Triângulos de Revolução (Apenas Cone Reto)
+    const matTri = new THREE.MeshBasicMaterial({color: 0xffe600, side: THREE.DoubleSide, transparent: true, opacity: 0.5});
+    const triGeoReto = new THREE.BufferGeometry();
+    const triStartGeoReto = new THREE.BufferGeometry();
+    const triReto = new THREE.Mesh(triGeoReto, matTri);
+    const triStartReto = new THREE.Mesh(triStartGeoReto, matTri);
+    groupReto.add(triReto); groupReto.add(triStartReto);
+
+    // Cilindros Comparativos de Transparência
+    const cylMat = new THREE.MeshBasicMaterial({color: 0x9ae6b4, wireframe: true, transparent: true, opacity: 0.2});
+    const cylMatSolid = new THREE.MeshStandardMaterial({color: 0x9ae6b4, transparent: true, opacity: 0.15, side: 2});
+    const origCylGeo = new THREE.CylinderGeometry(1, 1, 1, 64);
+    const origCylPos = new Float32Array(origCylGeo.attributes.position.array);
+    
+    const cylReto = new THREE.Mesh(origCylGeo.clone(), cylMatSolid);
+    const cylRetoWire = new THREE.Mesh(origCylGeo.clone(), cylMat);
+    cylReto.add(cylRetoWire); groupReto.add(cylReto);
+
+    const cylObl = new THREE.Mesh(origCylGeo.clone(), cylMatSolid);
+    const cylOblWire = new THREE.Mesh(origCylGeo.clone(), cylMat);
+    cylObl.add(cylOblWire); groupObl.add(cylObl);
+
+    // Controles de Animação e Interação
+    const rngRev = document.getElementById('range-rev');
+    const rngProg = document.getElementById('range-prog');
+    let isRevolvingAnim = false;
+    const btnAnim = document.getElementById('btn-anim-rev');
+
+    btnAnim.addEventListener('click', () => {
+        isRevolvingAnim = !isRevolvingAnim;
+        if (isRevolvingAnim) {
+            btnAnim.innerText = 'Pausar';
+            btnAnim.style.background = '#f56565';
+            btnAnim.style.color = 'white';
+            rngProg.value = 0; // Fecha a planificação se estiver aberta
+        } else {
+            btnAnim.innerText = 'Animar';
+            btnAnim.style.background = '#ecc94b';
+            btnAnim.style.color = '#2d3748';
+        }
+        update();
+    });
+
+    rngRev.addEventListener('input', () => { 
+        isRevolvingAnim = false; 
+        btnAnim.innerText = 'Animar';
+        btnAnim.style.background = '#ecc94b';
+        btnAnim.style.color = '#2d3748';
+        rngProg.value = 0; 
+    });
+    
+    rngProg.addEventListener('input', () => { 
+        isRevolvingAnim = false;
+        btnAnim.innerText = 'Animar';
+        btnAnim.style.background = '#ecc94b';
+        btnAnim.style.color = '#2d3748';
+        rngRev.value = 360; 
+    });
+
+    // --- COTAS ---
+    const labelsDiv = document.getElementById('labels-container');
+    const cotas = [];
+    class Label {
+        constructor(id, col, isDashed = true) {
+            this.el = document.createElement('div'); this.el.className='cota-label'; this.el.style.color=col;
+            labelsDiv.appendChild(this.el); 
+            const mat = new THREE.LineDashedMaterial({color: col, transparent:true, opacity: 0.8, dashSize: 2, gapSize: 1});
+            this.line = new THREE.Line(new THREE.BufferGeometry(), mat);
+            scene.add(this.line); cotas.push(this);
+        }
+        upd(p1, p2, txt, op) {
+            this.p1=p1; this.p2=p2; this.el.innerHTML = txt; this.el.style.opacity=op; this.line.material.opacity=op;
+            this.line.geometry.setFromPoints([p1, p2]);
+            this.line.computeLineDistances();
+        }
+    }
+    const cRetoH = new Label('h_r', '#99ccff'), cRetoR = new Label('r_r', '#99ccff'), cRetoG = new Label('g_r', '#99ccff');
+    const cOblG = new Label('g_o', '#ff9999'), cOblH = new Label('h_o', '#ffff00'), cOblR = new Label('r_o', '#ff9999');
+
+    // --- LÓGICA MATEMÁTICA E INTEGRAL ---
+    let phi_arr = new Float32Array(N + 1);
+    let g_arr = new Float32Array(N + 1);
+
+    function getConePoint(u_rat, v_rat, R, H, beta, prog, isObl, phi_total, revRad) {
+        let p = prog/100;
+        // O cone oblíquo está sempre fechado independentemente da barra de revolução
+        let currentRev = isObl ? (Math.PI * 2) : revRad; 
+        let A = u_rat * currentRev; 
+        let v = v_rat; 
+        
+        let apex_x = isObl ? H * Math.tan(beta) : 0;
+        let A_3d = new THREE.Vector3(apex_x, H/2, 0);
+        
+        // Utilizando -R*sin(A) para inverter o sentido da revolução
+        let B_3d = new THREE.Vector3(R*Math.cos(A), -H/2, -R*Math.sin(A)); 
+        let p_3d = B_3d.clone().multiplyScalar(1 - v).add(A_3d.clone().multiplyScalar(v));
+
+        let p_2d = new THREE.Vector3();
+        if (isObl) {
+            // Como forçamos o A = u_rat * 2PI para oblíquo, u_rat_scaled não depende do slider revRad
+            let u_rat_scaled = u_rat; 
+            let i = Math.floor(u_rat_scaled * N);
+            let fr = (u_rat_scaled * N) - i;
+            let phi_val = (i >= N) ? phi_arr[N] : phi_arr[i]*(1-fr) + phi_arr[i+1]*fr;
+            let g_val = (i >= N) ? g_arr[N] : g_arr[i]*(1-fr) + g_arr[i+1]*fr;
+            
+            let apex_2d = new THREE.Vector3(0, H/2, 0);
+            let base_2d = new THREE.Vector3(g_val * Math.sin(phi_val - phi_total/2), H/2 - g_val * Math.cos(phi_val - phi_total/2), 0);
+            p_2d = base_2d.clone().multiplyScalar(1 - v).add(apex_2d.clone().multiplyScalar(v));
+        } else {
+            let g = Math.sqrt(R*R + H*H);
+            let phi_val = (R/g) * A;
+            let phi_tot = (R/g) * Math.PI * 2;
+            let apex_2d = new THREE.Vector3(0, H/2, 0);
+            let base_2d = new THREE.Vector3(g * Math.sin(phi_val - phi_tot/2), H/2 - g * Math.cos(phi_val - phi_tot/2), 0);
+            p_2d = base_2d.clone().multiplyScalar(1 - v).add(apex_2d.clone().multiplyScalar(v));
+        }
+        return p_3d.clone().multiplyScalar(1 - p).add(p_2d.clone().multiplyScalar(p));
+    }
+
+    function update() {
+        const R = parseFloat(document.getElementById('range-r').value);
+        const H = parseFloat(document.getElementById('range-h').value);
+        const B = parseFloat(document.getElementById('range-ang').value) * Math.PI / 180;
+        const P = parseFloat(document.getElementById('range-prog').value);
+        const revDeg = parseFloat(rngRev.value);
+        const revRad = revDeg * Math.PI / 180;
+        const p = P/100;
+        
+        document.getElementById('ui-r').innerText=R; document.getElementById('ui-h').innerText=H;
+        document.getElementById('ui-ang').innerText=document.getElementById('range-ang').value+'°';
+        document.getElementById('ui-prog').innerText=P+'%';
+        document.getElementById('ui-rev').innerText=Math.round(revDeg)+'°';
+
+        let area_L_obl = 0;
+        phi_arr[0] = 0;
+        let du = (2 * Math.PI) / N;
+
+        for(let i=0; i<=N; i++){
+            let u = i * du;
+            let dx = R * Math.cos(u) - H * Math.tan(B);
+            let dz = -R * Math.sin(u); // Invertido o sentido
+            g_arr[i] = Math.sqrt(dx*dx + H*H + dz*dz);
+
+            if (i < N) {
+                let u_mid = u + du/2;
+                let dx_mid = R * Math.cos(u_mid) - H * Math.tan(B);
+                let dz_mid = -R * Math.sin(u_mid); // Invertido o sentido
+                let g_mid = Math.sqrt(dx_mid*dx_mid + H*H + dz_mid*dz_mid);
+                
+                let term = R - H * Math.tan(B) * Math.cos(u_mid);
+                let num_sqrt = Math.sqrt(H*H + term*term);
+                
+                let dphi_du = (R / (g_mid * g_mid)) * num_sqrt;
+                phi_arr[i+1] = phi_arr[i] + dphi_du * du;
+                area_L_obl += 0.5 * R * num_sqrt * du;
+            }
+        }
+        const phi_total = phi_arr[N];
+
+        // Deformação da Malha do Cone
+        [meshReto, meshObl].forEach((m, idx)=>{
+            const pos = m.geometry.attributes.position; 
+            const isO = idx===1;
+            for(let i=0; i<pos.count; i++) {
+                let u_rat = origPos[i*3] + 0.5;
+                let v_rat = origPos[i*3+1] + 0.5;
+                let v = getConePoint(u_rat, v_rat, R, H, isO?B:0, P, isO, phi_total, revRad);
+                pos.setXYZ(i, v.x, v.y, v.z);
+            }
+            pos.needsUpdate=true; m.geometry.computeVertexNormals();
+        });
+
+        // Bases dinâmicas (Apenas o cone reto acompanha a barra de revolução)
+        bReto.geometry.dispose(); bObl.geometry.dispose();
+        bReto.geometry = new THREE.CircleGeometry(R, 64, 0, revRad);
+        bReto.geometry.scale(1, -1, 1); // Inverte a face da base para acompanhar a nova rotação
+        bObl.geometry = new THREE.CircleGeometry(R, 64, 0, Math.PI * 2);
+        bObl.geometry.scale(1, -1, 1); // Inverte a face da base para acompanhar a nova rotação
+
+        function updateBase(mesh, isObl) {
+            let pos3d = new THREE.Vector3(0, -H/2, 0);
+            let g_mid = isObl ? g_arr[Math.floor(N/2)] : Math.sqrt(R*R + H*H);
+            let p2d_x = 0; 
+            let p2d_y = H/2 - g_mid - R; 
+            let pos2d = new THREE.Vector3(p2d_x, p2d_y, 0);
+
+            mesh.position.copy(pos3d).lerp(pos2d, p);
+            let q3d = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2, 0, 0));
+            mesh.quaternion.copy(q3d).slerp(new THREE.Quaternion(), p);
+        }
+        updateBase(bReto, false);
+        updateBase(bObl, true);
+
+        // Geometria da Revolução (Triângulos Geradores - SOMENTE CONE RETO)
+        let isRevolving = (revDeg < 360 && p === 0);
+        triReto.visible = triStartReto.visible = isRevolving;
+
+        if (isRevolving) {
+            // Utilizando -R*sin(revRad) para seguir a nova direção rotacional
+            let p3R = new THREE.Vector3(R*Math.cos(revRad), -H/2, -R*Math.sin(revRad));
+            triGeoReto.setFromPoints([new THREE.Vector3(0, H/2, 0), new THREE.Vector3(0, -H/2, 0), p3R]);
+            triStartGeoReto.setFromPoints([new THREE.Vector3(0, H/2, 0), new THREE.Vector3(R, -H/2, 0), new THREE.Vector3(0, -H/2, 0)]);
+        }
+
+        // Cilindros Comparativos
+        let showCil = document.getElementById('check-cilindro').checked;
+        cylReto.visible = showCil; cylObl.visible = showCil;
+        document.getElementById('cilindro-info').style.display = showCil ? 'block' : 'none';
+
+        if (showCil) {
+            cylReto.position.set(0, 0, 0);
+            cylReto.scale.set(R, H, R);
+            
+            const posObl = cylObl.geometry.attributes.position;
+            const posOblW = cylOblWire.geometry.attributes.position;
+            for(let i=0; i<posObl.count; i++) {
+                let y = origCylPos[i*3+1] * H;
+                let x = origCylPos[i*3] * R + (y + H/2) * Math.tan(B);
+                let z = origCylPos[i*3+2] * R;
+                posObl.setXYZ(i, x, y, z);
+                posOblW.setXYZ(i, x, y, z);
+            }
+            posObl.needsUpdate = true; posOblW.needsUpdate = true;
+            document.getElementById('val-cil-v').innerText = (Math.PI * R * R * H).toFixed(1);
+        }
+
+        // Atualizar Cálculos Proporcionais à Revolução (Apenas Cone Reto sofre influência do ratio)
+        let ratio = revDeg / 360;
+        let Ab_reto = Math.PI*R*R * ratio;
+        let V_reto = ((1/3) * (Math.PI*R*R) * H) * ratio;
+        let g_reto = Math.sqrt(R*R + H*H);
+        let area_L_reto = (Math.PI * R * g_reto) * ratio;
+        let At_reto = Ab_reto + area_L_reto;
+        
+        let Ab_obl = Math.PI*R*R;
+        let V_obl = (1/3) * (Math.PI*R*R) * H;
+        let At_obl = Ab_obl + area_L_obl;
+
+        document.getElementById('val-reto-ab').innerText = Ab_reto.toFixed(1);
+        document.getElementById('val-reto-al').innerText = area_L_reto.toFixed(1);
+        document.getElementById('val-reto-at').innerText = At_reto.toFixed(1);
+        document.getElementById('val-reto-v').innerText  = V_reto.toFixed(1);
+        
+        document.getElementById('val-obl-ab').innerText  = Ab_obl.toFixed(1);
+        document.getElementById('val-obl-al').innerText  = area_L_obl.toFixed(1);
+        document.getElementById('val-obl-at').innerText  = At_obl.toFixed(1);
+        document.getElementById('val-obl-v').innerText   = V_obl.toFixed(1);
+
+        // Cotas
+        scene.updateMatrixWorld(true);
+        let cotaOpacity = (isRevolvingAnim || isRevolving) ? 0 : 1;
+        
+        let pr_h_offset = -R - 15;
+        let pr1 = new THREE.Vector3(pr_h_offset, H/2, 0).applyMatrix4(groupReto.matrixWorld);
+        let pr2 = new THREE.Vector3(pr_h_offset, -H/2, 0).applyMatrix4(groupReto.matrixWorld);
+        cRetoH.upd(pr1, pr2, `h = ${H}`, (1-p) * cotaOpacity); 
+
+        let crb1 = bReto.getWorldPosition(new THREE.Vector3());
+        let crb2 = bReto.localToWorld(new THREE.Vector3(1, 0, 0));
+        cRetoR.upd(crb1, crb2, `r = ${R}`, cotaOpacity);
+
+        // Reto G (Geratriz na borda direita)
+        let prg1 = getConePoint(1, 0, R, H, 0, P, false, 0, revRad).add(groupReto.position).add(new THREE.Vector3(8 + 5*p, 0, 0));
+        let prg2 = getConePoint(1, 1, R, H, 0, P, false, 0, revRad).add(groupReto.position).add(new THREE.Vector3(8 + 5*p, 0, 0));
+        cRetoG.upd(prg1, prg2, `g = ${g_reto.toFixed(1)}`, cotaOpacity);
+
+        let po1 = getConePoint(0.5, 0, R, H, B, P, true, phi_total, revRad).add(groupObl.position).add(new THREE.Vector3(-8*p - 8*(1-p),0,0));
+        let po2 = getConePoint(0.5, 1, R, H, B, P, true, phi_total, revRad).add(groupObl.position).add(new THREE.Vector3(-8*p - 8*(1-p),0,0));
+        let g_max = Math.sqrt(H*H + Math.pow(R + H*Math.tan(B), 2));
+        cOblG.upd(po1, po2, `g = ${g_max.toFixed(1)}`, cotaOpacity);
+
+        let poh1 = new THREE.Vector3(R+25, H/2, 0).applyMatrix4(groupObl.matrixWorld);
+        let poh2 = new THREE.Vector3(R+25, -H/2, 0).applyMatrix4(groupObl.matrixWorld);
+        cOblH.upd(poh1, poh2, `h = ${H}`, (1-p) * cotaOpacity);
+
+        let cob1 = bObl.getWorldPosition(new THREE.Vector3());
+        let cob2 = bObl.localToWorld(new THREE.Vector3(1, 0, 0));
+        cOblR.upd(cob1, cob2, `r = ${R}`, cotaOpacity);
+    }
+
+    function enviarDados() {
+        const nome = document.getElementById('student-name').value.trim();
+        if(!nome) { alert('Identifique-se preenchendo o seu nome completo!'); return; }
+        
+        const btn = document.getElementById('btn-enviar');
+        btn.innerText = 'A registar no Banco de Dados...'; btn.disabled = true;
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyuP61kMQlfH96gO-WauWnEZjqmIeEMm8nRoyrINJvCVqHY3QVgetCw9DgfOuKVts0HLA/exec';
+        const data = {
+            nome: nome,
+            ans1: document.getElementById('ans1').value,
+            ans2: document.getElementById('ans2').value,
+            ans3: document.getElementById('ans3').value,
+            ans4: document.getElementById('ans4').value,
+            ans5: document.getElementById('ans5').value
+        };
+
+        fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) })
+        .then(() => { alert('Sucesso! As suas respostas foram enviadas para o professor.'); btn.innerText = 'Enviado com Sucesso!'; })
+        .catch(() => { alert('Erro na ligação. Tente Novamente.'); btn.disabled = false; btn.innerText = 'Tentar Novamente';});
+    }
+
+    function animate() {
+        requestAnimationFrame(animate); 
+        controls.update();
+
+        // Lógica de Animação Contínua (Loop da Revolução)
+        if (isRevolvingAnim) {
+            let val = parseFloat(rngRev.value);
+            val += 2.5; // Velocidade da animação (pode ajustar este valor)
+            if (val > 360) {
+                val = 0; // Reinicia o ciclo para efeito de loop infinito
+            }
+            rngRev.value = val;
+            update();
+        }
+
+        cotas.forEach(c => {
+            let mid = c.p1.clone().lerp(c.p2, 0.5); mid.project(camera);
+            c.el.style.left = `${(mid.x*0.5+0.5)*container.clientWidth}px`;
+            c.el.style.top = `${(mid.y*-0.5+0.5)*container.clientHeight}px`;
+        });
+        renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight; camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    document.querySelectorAll('input').forEach(i => i.addEventListener('input', update));
+    update(); animate();
+</script>
+
+</body>
+</html>
